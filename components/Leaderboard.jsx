@@ -122,22 +122,28 @@ const Leaderboard = () => {
 
       const leetCodeRating = await fetchLeetCodeRating();
 
-      for (const contestId of lastFiveContests) {
-        const response = await axios.get(
-          `https://codeforces.com/api/contest.standings?contestId=${contestId}&handles=${validHandles.join(
-            ";"
-          )}&showUnofficial=false`
-        );
-
-        response.data.result.rows.forEach((row) => {
-          const handle = row.party.members[0].handle;
-          const contestIndex = lastFiveContests.indexOf(contestId);
-          if (attendanceMap[handle]) {
-            attendanceMap[handle][contestIndex] = true;
-          }
-        });
-      }
-
+let handleMap={};
+for(let handle of validHandles){
+  handleMap[handle]=true;
+};
+for(let contestId of lastFiveContests) {
+  try{
+    let response=await axios.get(
+      `https://codeforces.com/api/contest.standings?contestId=${contestId}`
+    );
+    let contestIndex=lastFiveContests.indexOf(contestId);
+    for(let row of response.data.result.rows){
+      for(let member of row.party.members){
+        let handle=member.handle.toLowerCase();
+        if(handleMap[handle]&&attendanceMap[handle]!=null) {
+          attendanceMap[handle][contestIndex] = true;
+        }
+      };
+    };
+  }catch(error){
+    console.error(`Error fetching standings for contest ${contestId}:`,error);
+  }
+}
       setAttendanceMap(attendanceMap);
       // console.log("Attendance Map:", attendanceMap);
 
