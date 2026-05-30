@@ -13,7 +13,6 @@ export async function GET(req) {
 
     // Load members.json
     const filePath = path.resolve(process.cwd(), "json/members.json");
-    let userHandles = [];
     let userMapping = {};
     let userRefMapping = {};
 
@@ -21,7 +20,6 @@ export async function GET(req) {
         const data = fs.readFileSync(filePath, "utf-8");
         const users = JSON.parse(data);
 
-        userHandles = Object.values(users).map((user) => user.cf_username);
         userMapping = Object.fromEntries(
             Object.values(users).map((user) => [user.cf_username, user.name])
         );
@@ -35,15 +33,7 @@ export async function GET(req) {
 
     try {
         // Query only your club members using handles
-        const response = await axios.get("https://codeforces.com/api/contest.standings", {
-            params: {
-                contestId,
-                handles: userHandles.join(";"), // Filtered by members
-                showUnofficial: true,
-                from: 1,
-                count: userHandles.length,
-            },
-        });
+        const response = await axios.get(`https://codeforces.com/api/contest.standings?contestId=${contestId}`);
 
         if (response.data.status === "OK") {
             const standings = response.data.result.rows;
@@ -53,6 +43,7 @@ export async function GET(req) {
 
             for (const row of standings) {
                 const handle = row.party.members[0].handle;
+                if (userMapping[handle]) {
                 const type = row.party.participantType;
 
                 if (!uniqueMap.has(handle)) {
@@ -66,7 +57,7 @@ export async function GET(req) {
                     }
                 }
             }
-
+            }
             const formattedData = Array.from(uniqueMap.values()).map((row) => {
                 const handle = row.party.members[0].handle;
                 const userName = userMapping[handle] || "Unknown";
