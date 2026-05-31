@@ -174,7 +174,7 @@ for(let contestId of lastFiveContests) {
     let contestIndex=lastFiveContests.indexOf(contestId);
     for(let row of response.data.result.rows){
       for(let member of row.party.members){
-        let handle=member.handle.toLowerCase();
+        let handle=member.handle;
         if(handleMap[handle]&&attendanceMap[handle]!=null) {
           attendanceMap[handle][contestIndex] = true;
         }
