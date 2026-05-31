@@ -12,7 +12,8 @@ const CACHE_DURATION = 24 * 60 * 60 * 1000; // 1 day in milliseconds
 
 const Leaderboard = () => {
   const [leaderboardData, setLeaderboardData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
+  const [isAttendanceLoading, setIsAttendanceLoading] = useState(true);
   const [attendanceMap, setAttendanceMap] = useState({});
   const [activeTab, setActiveTab] = useState("all");
   const [sortKey, setSortKey] = useState(null);
@@ -109,7 +110,8 @@ const Leaderboard = () => {
     const handles = Object.keys(members).map(
       (member) => members[member].cf_username
     );
-    setLoading(true);
+    setIsProfileLoading(true);
+    setIsAttendanceLoading(true);
     const { validHandles } = await getValidCodeforcesUsers(handles);
 
     const lastFiveContests = await fetchLastFiveContests();
@@ -121,32 +123,6 @@ const Leaderboard = () => {
       }, {});
 
       const leetCodeRating = await fetchLeetCodeRating();
-
-let handleMap={};
-for(let handle of validHandles){
-  handleMap[handle]=true;
-};
-for(let contestId of lastFiveContests) {
-  try{
-    let response=await axios.get(
-      `https://codeforces.com/api/contest.standings?contestId=${contestId}`
-    );
-    let contestIndex=lastFiveContests.indexOf(contestId);
-    for(let row of response.data.result.rows){
-      for(let member of row.party.members){
-        let handle=member.handle.toLowerCase();
-        if(handleMap[handle]&&attendanceMap[handle]!=null) {
-          attendanceMap[handle][contestIndex] = true;
-        }
-      };
-    };
-  }catch(error){
-    console.error(`Error fetching standings for contest ${contestId}:`,error);
-  }
-}
-      setAttendanceMap(attendanceMap);
-      // console.log("Attendance Map:", attendanceMap);
-
       const cfRatings = await fetchUserRatings(validHandles);
       const updatedMembers = [];
 
@@ -185,6 +161,34 @@ for(let contestId of lastFiveContests) {
 
       updatedMembers.sort((a, b) => b.rating - a.rating);
       setLeaderboardData(updatedMembers);
+      setIsProfileLoading(false);
+let handleMap={};
+for(let handle of validHandles){
+  handleMap[handle]=true;
+};
+for(let contestId of lastFiveContests) {
+  try{
+    let response=await axios.get(
+      `https://codeforces.com/api/contest.standings?contestId=${contestId}`
+    );
+    let contestIndex=lastFiveContests.indexOf(contestId);
+    for(let row of response.data.result.rows){
+      for(let member of row.party.members){
+        let handle=member.handle;
+        if(handleMap[handle]&&attendanceMap[handle]!=null) {
+          attendanceMap[handle][contestIndex] = true;
+        }
+      };
+    };
+  }catch(error){
+    console.error(`Error fetching standings for contest ${contestId}:`,error);
+  }
+}
+      setAttendanceMap(attendanceMap);
+      setIsAttendanceLoading(false);
+      // console.log("Attendance Map:", attendanceMap);
+
+      
       // console.log( "Leaderboard Data:", updatedMembers);
       const cachedData = {
         data: updatedMembers,
@@ -196,7 +200,8 @@ for(let contestId of lastFiveContests) {
     } catch (error) {
       console.error("Error fetching leaderboard data:", error);
     } finally {
-      setLoading(false);
+      setIsProfileLoading(false);
+      setIsAttendanceLoading(false);
     }
   };
 
@@ -245,7 +250,8 @@ for(let contestId of lastFiveContests) {
 
       setLeaderboardData(cachedData.data);
       setAttendanceMap(cachedData.attendanceMap);
-      setLoading(false);
+      setIsProfileLoading(false);
+      setIsAttendanceLoading(false);
     } else {
       fetchRatingsAndAttendance();
     }
@@ -253,7 +259,7 @@ for(let contestId of lastFiveContests) {
     return () => clearInterval(intervalId);
   }, [sortKey]);
 
-  if (loading) {
+  if (isProfileLoading) {
     return <LeaderboardSkeleton />;
   }
 
@@ -469,7 +475,11 @@ for(let contestId of lastFiveContests) {
                   {/* Attendance */}
                   <td className="p-3 sm:p-4">
                     <div className="flex gap-2 items-center justify-center">
-                      {attendanceMap[member.cf_username]?.map((attended, i) => (
+                      {isAttendanceLoading ? (
+                        Array.from({ length: 5 }).map((_, i) => (
+                          <div key={i} className="w-4 h-4 bg-zinc-700 rounded-full animate-pulse" />
+                        ))
+                      ) : attendanceMap[member.cf_username]?.map((attended, i) => (
                         <span key={i}>
                           {attended ? (
                             <CircleCheck size={18} className="text-green-500" />
