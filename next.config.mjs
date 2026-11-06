@@ -20,7 +20,7 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'userpic.codeforces.org',
+        hostname: 'codeforces.com',
       },
       {
         protocol: 'https',
